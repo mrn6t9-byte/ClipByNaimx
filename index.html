@@ -1,99 +1,137 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClipByNaim Web Recorder</title>
+<title>ClipByNaim Recorder MP4</title>
+
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
 <style>
-body {
-  margin:0;
-  font-family:Arial,sans-serif;
-  background: linear-gradient(160deg,#0f2027,#203a43,#2c5364);
-  color:#fff;
-  text-align:center;
-  padding:10px;
+body{
+background:#0f2027;
+color:white;
+font-family:Arial;
+text-align:center;
+padding:10px;
 }
-h2 {color:#00ffe7; text-shadow:0 0 10px #00ffe7;}
-input, button {width:95%; padding:15px; margin:5px 0; border:none; border-radius:12px;}
-input {background:#1a1a1a; color:#fff; box-shadow:0 0 10px #00ffe7;}
-button {font-weight:bold; cursor:pointer; transition:0.2s;}
-#playBtn {background:linear-gradient(90deg,#ff4b1f,#1fddff);}
-#recBtn {background:linear-gradient(90deg,#ff1f4b,#ffdf1f);}
-#stopBtn {background:linear-gradient(90deg,#fff,#aaa); color:#000;}
-video {width:100%; border-radius:16px; margin:10px 0; background:#000; box-shadow:0 0 25px rgba(0,255,255,0.5);}
-#msg {color:#00ffe7; font-size:14px; margin-top:5px;}
+
+input,button{
+width:95%;
+padding:14px;
+margin:5px;
+border-radius:10px;
+border:none;
+}
+
+video{
+width:100%;
+background:black;
+border-radius:12px;
+margin-top:10px;
+}
 </style>
 </head>
+
 <body>
 
-<h2>ClipByNaim Web Recorder</h2>
+<h2>ClipByNaim MP4 Recorder</h2>
 
-<input id="link" placeholder="Paste LIVE .m3u8 link">
-<button id="playBtn">▶ Play Live</button>
-<button id="recBtn">● Start Recording</button>
-<button id="stopBtn">■ Stop Recording</button>
+<input id="link" placeholder="Paste .m3u8 link">
 
-<video id="v" controls playsinline autoplay muted></video>
+<button id="play">Play</button>
+<button id="rec">Start Recording</button>
+<button id="stop">Stop</button>
+
+<video id="v" controls autoplay muted playsinline></video>
+
 <p id="msg"></p>
 
 <script>
-const v = document.getElementById("v");
-const linkInput = document.getElementById("link");
-const msg = document.getElementById("msg");
-const recBtn = document.getElementById("recBtn");
 
-let mediaRecorder;
-let chunks=[];
+const v=document.getElementById("v")
+const msg=document.getElementById("msg")
 
-// --- Play Live ---
-document.getElementById("playBtn").onclick = () => {
-  const url = linkInput.value.trim();
-  if(!url){ alert("Paste .m3u8 link!"); return; }
-  
-  if(Hls.isSupported()){
-    const hls = new Hls({ lowLatencyMode:true, maxBufferLength:60 });
-    hls.loadSource(url);
-    hls.attachMedia(v);
-    hls.on(Hls.Events.MANIFEST_PARSED,()=>v.play());
-  } else {
-    v.src = url;
-    v.play();
-  }
-  msg.innerText = "🔵 Live Playing...";
+let recorder
+let chunks=[]
+
+// PLAY
+document.getElementById("play").onclick=()=>{
+
+const url=document.getElementById("link").value.trim()
+
+if(!url){alert("Paste link");return}
+
+if(Hls.isSupported()){
+
+const hls=new Hls({
+lowLatencyMode:true,
+maxBufferLength:180
+})
+
+hls.loadSource(url)
+hls.attachMedia(v)
+
+}else{
+
+v.src=url
+
 }
 
-// --- Start Recording ---
-document.getElementById("recBtn").onclick = () => {
-  if(!v.captureStream){ alert("Mobile browser may not support recording."); return; }
-  recBtn.disabled = true;
-  chunks=[];
-  // 60fps 1080p / 2160p if supported
-  let stream = v.captureStream(60);
-  mediaRecorder = new MediaRecorder(stream, {
-    mimeType: 'video/webm;codecs=vp9',
-    videoBitsPerSecond: 25000000 // 25 Mbps high bitrate
-  });
-  mediaRecorder.ondataavailable = e => chunks.push(e.data);
-  mediaRecorder.onstop = () => {
-    const blob = new Blob(chunks,{type:"video/webm"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const dt = new Date();
-    a.download = `ClipByNaim_${dt.getFullYear()}${(dt.getMonth()+1).toString().padStart(2,'0')}${dt.getDate().toString().padStart(2,'0')}_${dt.getHours().toString().padStart(2,'0')}${dt.getMinutes().toString().padStart(2,'0')}${dt.getSeconds().toString().padStart(2,'0')}.webm`;
-    a.click();
-    recBtn.disabled = false;
-    msg.innerText = "⬇ Recording saved!";
-  }
-  mediaRecorder.start();
-  msg.innerText = "🔴 Recording (High Quality 1080p/2160p, 25 Mbps)...";
+msg.innerText="Playing..."
+
 }
 
-// --- Stop Recording ---
-document.getElementById("stopBtn").onclick = () => {
-  if(mediaRecorder) mediaRecorder.stop();
+// START RECORD
+document.getElementById("rec").onclick=()=>{
+
+if(!v.captureStream){alert("Browser not supported");return}
+
+chunks=[]
+
+let stream=v.captureStream(30)
+
+recorder=new MediaRecorder(stream,{
+
+mimeType:'video/mp4',
+
+videoBitsPerSecond:12000000
+
+})
+
+recorder.ondataavailable=e=>chunks.push(e.data)
+
+recorder.onstop=()=>{
+
+let blob=new Blob(chunks,{type:"video/mp4"})
+
+let url=URL.createObjectURL(blob)
+
+let a=document.createElement("a")
+
+a.href=url
+
+a.download="ClipByNaim_clip.mp4"
+
+a.click()
+
+msg.innerText="Download finished"
+
 }
+
+recorder.start()
+
+msg.innerText="Recording..."
+
+}
+
+// STOP
+document.getElementById("stop").onclick=()=>{
+
+if(recorder)recorder.stop()
+
+}
+
 </script>
 
 </body>
