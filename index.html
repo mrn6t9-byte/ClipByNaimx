@@ -3,135 +3,136 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>ClipByNaim Recorder MP4</title>
-
-<link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-<script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+<title>ClipByNaim Pro Recorder</title>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <style>
-
 body{
 background:#0f2027;
 color:white;
 font-family:Arial;
 text-align:center;
-padding:10px;
+padding:15px;
 }
 
 input,button{
 width:95%;
 padding:14px;
-margin:5px;
+margin:6px;
 border-radius:10px;
 border:none;
+font-size:16px;
+}
+
+button{
+background:#00c6ff;
+color:black;
+font-weight:bold;
 }
 
 video{
 width:100%;
+background:black;
 border-radius:12px;
 margin-top:10px;
 }
 
+#msg{
+margin-top:10px;
+font-size:14px;
+}
 </style>
 </head>
 
 <body>
 
-<h2>ClipByNaim MP4 Recorder</h2>
+<h2>ClipByNaim Pro Recorder</h2>
 
-<input id="link" placeholder="Paste .m3u8 link">
+<input id="link" placeholder="Paste .m3u8 stream link">
 
-<button id="play">Play</button>
-<button id="rec">Start Recording</button>
-<button id="stop">Stop</button>
+<button onclick="play()">Play Stream</button>
+<button onclick="startRec()">Start Recording</button>
+<button onclick="stopRec()">Stop & Download</button>
 
-<video
-id="v"
-class="video-js vjs-default-skin"
-controls
-autoplay
-muted
-playsinline
-></video>
+<video id="video" controls autoplay muted playsinline></video>
 
 <p id="msg"></p>
 
 <script>
 
-const videoElement=document.getElementById("v")
+const video=document.getElementById("video")
 const msg=document.getElementById("msg")
-
-const player=videojs("v")
 
 let recorder
 let chunks=[]
 
-// PLAY
-document.getElementById("play").onclick=()=>{
+// PLAY STREAM
+function play(){
 
-const url=document.getElementById("link").value.trim()
+let url=document.getElementById("link").value.trim()
 
-if(!url){alert("Paste link");return}
+if(!url){
+alert("Paste .m3u8 link")
+return
+}
+
+// CORS proxy
+url="https://corsproxy.io/?"+url
 
 if(Hls.isSupported()){
 
-const hls=new Hls({
+let hls=new Hls({
 lowLatencyMode:true,
-maxBufferLength:180
+maxBufferLength:120
 })
 
 hls.loadSource(url)
-hls.attachMedia(videoElement)
+hls.attachMedia(video)
 
 }else{
 
-player.src({
-src:url,
-type:"application/x-mpegURL"
-})
+video.src=url
 
 }
 
-msg.innerText="Playing..."
+msg.innerText="Stream Playing..."
 
 }
 
-// RECORD
-document.getElementById("rec").onclick=()=>{
 
-if(!videoElement.captureStream){alert("Browser not supported");return}
+// START RECORD
+function startRec(){
+
+if(!video.captureStream){
+alert("Browser not supported")
+return
+}
 
 chunks=[]
 
-let stream=videoElement.captureStream(30)
+let stream=video.captureStream()
 
 recorder=new MediaRecorder(stream,{
-
-mimeType:"video/mp4",
-
-videoBitsPerSecond:12000000
-
+mimeType:"video/webm;codecs=vp9",
+videoBitsPerSecond:10000000
 })
 
-recorder.ondataavailable=e=>chunks.push(e.data)
+recorder.ondataavailable=e=>{
+if(e.data.size>0) chunks.push(e.data)
+}
 
 recorder.onstop=()=>{
 
-let blob=new Blob(chunks,{type:"video/mp4"})
-
+let blob=new Blob(chunks,{type:"video/webm"})
 let url=URL.createObjectURL(blob)
 
 let a=document.createElement("a")
-
 a.href=url
-a.download="ClipByNaim_clip.mp4"
+a.download="ClipByNaim_record.webm"
 a.click()
 
-msg.innerText="Download finished"
-
+msg.innerText="Download Ready"
 }
 
 recorder.start()
@@ -140,10 +141,14 @@ msg.innerText="Recording..."
 
 }
 
-// STOP
-document.getElementById("stop").onclick=()=>{
 
-if(recorder) recorder.stop()
+// STOP RECORD
+function stopRec(){
+
+if(recorder){
+recorder.stop()
+msg.innerText="Processing..."
+}
 
 }
 
